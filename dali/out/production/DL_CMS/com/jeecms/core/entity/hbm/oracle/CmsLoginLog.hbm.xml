@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping package="com.jeecms.core.entity">
+	<class name="CmsLoginLog" table="JC_LOGIN_LOG">
+		<meta attribute="sync-DAO">false</meta>
+		<id name="id" type="integer" column="id">
+			<generator class="sequence"><param name="sequence">S_JC_LOG</param></generator>
+		</id>
+		<property name="failCount" column="failCount" type="integer" not-null="true" length="10"/>
+		<property name="indate" column="indate" type="timestamp" not-null="true" length="19"/>
+		<property name="iP" column="ip" type="string" not-null="false" length="50"/>
+		<property name="title" column="title" type="string" not-null="false" length="255"/>
+	</class>
+</hibernate-mapping>

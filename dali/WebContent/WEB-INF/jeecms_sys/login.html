@@ -1,0 +1,165 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <title>JEECMS Administrator's Control Panel</title>
+    <script type="text/javascript" src="${base}/r/cms/www/red/js/des.js"></script>
+    <script type="text/javascript" src="${base}/r/cms/www/red/js/jquery-2.1.0.js" ></script>
+    <script type="text/javascript" src="${base}/r/cms/www/red/js/layer/layer.js" ></script>
+    <#include "/jeecms_sys/head.html"/>
+    <script type="text/javascript">
+        if(top!=this) {
+            top.location=this.location;
+        }
+        $(function() {
+            $("#username").focus();
+            $("#jvForm").validate();
+            var errorCount =parseInt($.cookie("errorCount")==null?"0":$.cookie("errorCount"));
+            if(errorCount>0&&errorCount<5){
+                var size=$(".login-error ul").children().length;
+                if(size>0){
+                    $(".login-error ul").children().eq(0).append('<span style="color: red;">'+'&nbsp;再输错'+(5-errorCount)+'次后将锁定！'+'</span>');
+                }
+            }
+        });
+    </script>
+    <style type="text/css">
+        body{background:url(${base}/res/jeecms/img/login/bg.jpg) left top repeat-x;}
+    </style>
+</head>
+<body>
+<form id="jvForm" action="login.do" method="post" style="width:100%;">
+    <#if returnUrl??><input type="hidden" name="returnUrl" value="${returnUrl}"/></#if>
+<#if processUrl??><input type="hidden" name="processUrl" value="${processUrl}"/></#if>
+<div class="login-index">
+    <div class="login-index-box">
+        <div class="login-logo"><img src="${base}/res/jeecms/images/login-logo.jpg"></div>
+        <div class="login-text">
+            <div class="username-con"><i></i>
+                <input type="text" id="username1" name="username1" vld="{required:true}" maxlength="100" class="username" placeholder="<@s.m "login.username"/>" />
+                <input id="username" name="username" type="hidden">
+            </div>
+            <div class="password-con"><i></i>
+                <input type="password" id="password1" name="password1" maxlength="32" vld="{required:true}" class="password" placeholder="<@s.m "login.password"/>" />
+                <input id="password" name="password" type="hidden">
+                <input id="key" name="key"  type="hidden">
+            </div>
+            <#if (errorTimes??&&errorTimes<=0)||(errorRemaining?? && errorRemaining<=0)>
+            <div class="login-captcha"><i></i>
+                <input name="captcha" type="text" id="captcha" vld="{required:true}" class="captcha" placeholder="<@s.m "login.captcha"/>" />
+                <img src="${base}/captcha.svl" onclick="this.src='${base}/captcha.svl?d='+new Date()*1"/>
+
+            </div>
+        </#if>
+    </div>
+    <div class="login-submit" style="border:none;"><input  onclick="userLogin()" value="" style="border:0px none;" /></div>
+    <div style="height:0; clear:both;"></div>
+    <div class="login-error">
+    <#if error??>
+        <ul>
+            <#if error=="org.apache.shiro.authc.IncorrectCredentialsException">
+            <li>
+                <img src="${base}/res/jeecms/images/error-icon.png"><@s.m "error.invalidPassword"/>
+            </li>
+            <#elseif error=="org.apache.shiro.authc.UnknownAccountException">
+            <li><img src="${base}/res/jeecms/images/error-icon.png"><@s.m "error.usernameNotExist"/>
+            </li>
+            <#elseif error=="com.jeecms.common.security.CaptchaErrorException">
+            <li><img src="${base}/res/jeecms/images/error-icon.png"><@s.m "error.invalidCaptcha"/>
+            </li>
+            <#elseif error=="com.jeecms.common.security.DisabledException">
+            <li><img src="${base}/res/jeecms/images/error-icon.png"><@s.m "error.userDisabled"/>
+            </li>
+        </#if>
+        </ul>
+</#if>
+</div>
+</div>
+</div>
+</form>
+<#include "/common/alert_message.html"/>
+</body>
+<script type="text/javascript">
+    function clearErrorMsg(ele){
+        $("#errorMsg").html("");
+        $("#registerMsg").hide();
+    }
+
+    function userLogin() {
+        $("#errorMsg").html("");
+        var username = $("#username1").val();
+        var pwd = $("#password1").val();
+        var flag =0;
+        if(!username){
+            $("#usernameMsg").html("*用户名不能为空");
+            flag=1;
+        }
+        if(!pwd){
+            $("#passwordMsg").html("*密码不能为空");
+            flag=flag+1;
+        }
+        if(flag>0){
+            return;
+        }else{
+            getKey(username);
+
+        }
+    }
+
+    function getKey(username) {
+        $.ajax({
+            url: encodeURI("./../../getUserKey.jspx"),
+            data:{
+                username:username
+            },
+            dataType: 'json',
+            type:'POST',
+            success: function (result) {
+               //当前用户登录出错的次数
+               var loginErrorCount=parseInt(result.loginError);
+               var json=result.str;
+               if(loginErrorCount>=5){
+                   layer.msg('出错次数已超过5次，请稍后再试！', {icon:4,time: 4000});
+               }else{
+                   if(json){
+                       var str=json.split("_@@_");
+                       var data=str[0];
+                       var key=str[1];
+                       var yhm=$("#username1").val();
+                       var scode=$("#password1").val();
+                       yhm= strEnc(yhm,data,data,data);
+                       scode= strEnc(scode,data,data,data);
+                       $("#username").val(yhm);
+                       $("#password").val(scode);
+                       $("#key").val(key);
+                       // $("#loading").show();
+                       $("#jvForm").submit();
+                   }else{
+                       $(".error-message").html("登录出现问题，稍后请重试！");
+                   }
+               }
+            },
+            error: function (response) {
+                alert(response.statusText);
+                $("#light_1").hide();
+            },
+            timeout: 60000
+        });
+    }
+
+    var isShow=true;
+    function change(ele){
+        if (isShow) {//显示
+            $("#password").attr('type','text');
+            isShow=false;
+            $(ele).removeClass("glyphicon-eye-open");
+            $(ele).addClass("glyphicon-eye-close");
+        }else{
+            $("#password").attr('type','password');
+            isShow=true;
+            $(ele).removeClass("glyphicon-eye-close");
+            $(ele).addClass("glyphicon-eye-open");
+        }
+    };
+</script>
+</html>
